@@ -102,10 +102,17 @@ impl ServerMessages {
         self.sent_messages.push((client, channel_id, message));
     }
 
-    /// Retains only the messages specified by the predicate.
+    /// Retains only the sent messages specified by the predicate.
     ///
-    /// Used for testing.
-    pub(crate) fn retain_sent<F>(&mut self, f: F)
+    /// In-place filter; rows for which `f` returns `false` are removed and
+    /// the rest stay in their original order. Pairs naturally with
+    /// [`Self::iter_sent`]: peek the buffer, decide what to keep, and
+    /// remove the rest before the messaging backend drains. Useful for
+    /// tools that intercept outbound traffic targeting non-network
+    /// "client" entities (e.g. replay recorders writing a phantom
+    /// client's bytes to disk and removing them so the network backend
+    /// doesn't try to forward them to a connection it doesn't own).
+    pub fn retain_sent<F>(&mut self, f: F)
     where
         F: FnMut(&(Entity, usize, Bytes)) -> bool,
     {
