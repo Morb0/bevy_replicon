@@ -574,9 +574,14 @@ The server always sees the entire world, even in listen-server mode.
 ### Prioritization
 
 By default, all unacknowledged mutations are sent every tick. This can be expensive if you
-have many entities with mutating components. The [`PriorityMap`] component lets you configure
-how often mutations are sent for each entity on authorized clients. See its documentation for
-more details.
+have many entities with mutating components. Priority can be configured globally for an entity
+via [`ReplicatePriority`] or per client via the [`PriorityMap`] component on an
+[`AuthorizedClient`]. The precedence is per-client [`PriorityMap`], [`ReplicatePriority`],
+then the default priority of `1.0`.
+
+This should not be confused with replication rule priority. Rule priority, configured via
+[`AppRuleExt::replicate_with_priority`] or [`AppRuleExt::replicate_bundle_with`], only controls
+which replication rule is selected. It does not affect mutation send priority.
 
 In addition, [client visibility](#client-visibility) can be used to further reduce bandwidth by hiding entities
 that are irrelevant to a given client.
@@ -782,8 +787,9 @@ pub mod prelude {
 
     #[cfg(feature = "server")]
     pub use super::server::{
-        AuthorizedClient, PriorityMap, ServerPlugin, ServerSystems, message::ServerMessagePlugin,
-        related_entities::SyncRelatedAppExt, visibility::AppVisibilityExt,
+        AuthorizedClient, PriorityMap, ReplicatePriority, ServerPlugin, ServerSystems,
+        message::ServerMessagePlugin, related_entities::SyncRelatedAppExt,
+        visibility::AppVisibilityExt,
     };
 
     #[cfg(feature = "client_diagnostics")]
