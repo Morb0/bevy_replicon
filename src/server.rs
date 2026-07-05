@@ -373,7 +373,7 @@ fn cleanup_acks(
 }
 
 fn receive_acks(mut messages: ResMut<ServerMessages>, mut clients: Query<&mut ClientTicks>) {
-    for (client, mut message) in messages.receive(ClientChannel::MutationAcks) {
+    for (client, mut message) in messages.drain_received(ClientChannel::MutationAcks) {
         let Ok(mut ticks) = clients.get_mut(client) else {
             debug!("ignoring acks for disconnected client `{client}`");
             continue;

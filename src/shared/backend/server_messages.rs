@@ -54,10 +54,11 @@ impl ServerMessages {
             .map(|(entity, bytes)| (*entity, bytes))
     }
 
-    /// Receives all available messages from clients over a channel.
+    /// Removes and returns all received messages on a channel.
     ///
-    /// All messages will be drained.
-    pub(crate) fn receive<I: Into<usize>>(
+    /// The method is called automatically on receive, but can also be used
+    /// to modify or filter the inbound traffic.
+    pub fn drain_received<I: Into<usize>>(
         &mut self,
         channel_id: I,
     ) -> impl Iterator<Item = (Entity, Bytes)> + '_ {
