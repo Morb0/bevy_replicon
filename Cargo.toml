@@ -87,6 +87,9 @@ world_serialization = ["bevy/bevy_world_serialization"]
 # Replication into a scene.
 scene = ["bevy/bevy_world_serialization"]
 
+# Artificial network conditions (latency, jitter, loss, duplication) for testing and debugging.
+link_conditioner = []
+
 [[bench]]
 name = "replication"
 harness = false
@@ -154,6 +157,10 @@ required-features = ["client_diagnostics", "client", "server"]
 [[test]]
 name = "userdata"
 required-features = ["client", "server"]
+
+[[test]]
+name = "link_conditioner"
+required-features = ["link_conditioner", "client", "server"]
 
 [lints.clippy]
 type_complexity = "allow"

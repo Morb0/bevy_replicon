@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `DiffIndex::wrapping_cmp` to compare indices.
 - `ClientMessages::drain_received` and `ServerMessages::drain_received` to drain inbound messages on a channel.
 - `ReplicatePriority` component to configure entity replication priority for all authorized clients, unless overridden by the client's [`PriorityMap`].
+- `LinkConditionerPlugin` behind the `link_conditioner` feature to emulate latency, jitter, packet loss and duplication on received messages. Configure it per-client with a `ConditionerConfig` component or globally with a `GlobalConditionerConfig` resource (with presets like `ConditionerConfig::POOR`). It operates on `ClientMessages` and `ServerMessages`, so it works with any backend. Reliability-aware: only unreliable channels are dropped or duplicated, and ordered channels are never reordered.
 
 ### Changed
 
