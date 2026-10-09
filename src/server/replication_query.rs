@@ -1,10 +1,9 @@
 use bevy::{
     ecs::{
-        archetype::ArchetypeEntity,
         change_detection::{ComponentTicks, Tick},
         component::{ComponentId, StorageType},
         query::{FilteredAccess, FilteredAccessSet},
-        storage::{Column, ComponentSparseSet, TableId},
+        storage::{Column, ComponentSparseSet, Table, TableId, TableRow},
         system::{ReadOnlySystemParam, SystemMeta, SystemParam, SystemParamValidationError},
         world::unsafe_world_cell::UnsafeWorldCell,
     },
@@ -26,7 +25,7 @@ pub(crate) struct ReplicationQuery<'w, 's> {
 
 impl<'w> ReplicationQuery<'w, '_> {
     /// Returns [`ReplicatePriority`] for an entity if it has one.
-    pub(super) fn get_priority(&self, entity: &ArchetypeEntity, table_id: TableId) -> Option<f32> {
+    pub(super) fn get_priority(&self, table_id: TableId, table_row: TableRow) -> Option<f32> {
         let priority_id = self.state.priority_id;
         debug_assert!(self.state.component_access.access().has_read(priority_id));
 
@@ -41,11 +40,37 @@ impl<'w> ReplicationQuery<'w, '_> {
         let table = storages.tables.get(table_id)?;
 
         // SAFETY: the component has table storage.
-        let ptr = unsafe { table.get_component(priority_id, entity.table_row())? };
+        let ptr = unsafe { table.get_component(priority_id, table_row)? };
 
         // SAFETY: `priority_id` is registered for `ReplicatePriority`.
         let priority = unsafe { ptr.deref::<ReplicatePriority>() };
         Some(**priority)
+    }
+
+    /// Returns a table.
+    ///
+    /// # Safety
+    ///
+    /// Only replicated components may be read from it.
+    pub(super) unsafe fn table(&self, table_id: TableId) -> &'w Table {
+        // SAFETY: caller ensured that only replicated components are accessed.
+        let storages = unsafe { self.world.storages() };
+        // SAFETY: table IDs come from archetypes of this world.
+        unsafe { storages.tables.get(table_id).unwrap_unchecked() }
+    }
+
+    /// Returns a sparse set of a replicated component.
+    ///
+    /// # Safety
+    ///
+    /// The component must be previously marked for replication and use sparse set storage.
+    pub(super) unsafe fn sparse_set(&self, component_id: ComponentId) -> &'w ComponentSparseSet {
+        debug_assert!(self.state.component_access.access().has_read(component_id));
+
+        // SAFETY: caller ensured the component is replicated.
+        let storages = unsafe { self.world.storages() };
+        // SAFETY: caller ensured the component uses sparse set storage.
+        unsafe { storages.sparse_sets.get(component_id).unwrap_unchecked() }
     }
 
     /// Resolves where a replicated component of an archetype is stored.
@@ -93,18 +118,21 @@ impl<'w> ComponentStorage<'w> {
     /// # Safety
     ///
     /// The entity must belong to the archetype this storage was resolved for.
-    pub(super) unsafe fn get(self, entity: &ArchetypeEntity) -> (Ptr<'w>, ComponentTicks) {
+    pub(super) unsafe fn get(
+        self,
+        entity: Entity,
+        table_row: TableRow,
+    ) -> (Ptr<'w>, ComponentTicks) {
         match self {
             ComponentStorage::Table(column) => unsafe {
-                let row = entity.table_row();
                 (
-                    column.get_data_unchecked(row),
-                    column.get_ticks_unchecked(row),
+                    column.get_data_unchecked(table_row),
+                    column.get_ticks_unchecked(table_row),
                 )
             },
             ComponentStorage::SparseSet(sparse_set) => unsafe {
-                let component = sparse_set.get(entity.id()).unwrap_unchecked();
-                let ticks = sparse_set.get_ticks(entity.id()).unwrap_unchecked();
+                let component = sparse_set.get(entity).unwrap_unchecked();
+                let ticks = sparse_set.get_ticks(entity).unwrap_unchecked();
                 (component, ticks)
             },
         }

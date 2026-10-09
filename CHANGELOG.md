@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Skip entities that a client already has unchanged when collecting replication changes, instead of checking every component for every client each tick.
+- Collect replication changes only for entities with a component changed since the last pass, a pending removal, an unacknowledged or deferred mutation, or regained visibility. A full pass over all replicated entities happens only while a client is new.
 
 ## [0.42.3] - 2026-08-22
 

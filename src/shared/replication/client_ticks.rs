@@ -1,7 +1,10 @@
 use core::time::Duration;
 
 use bevy::{
-    ecs::{change_detection::Tick, entity::hash_map::EntityHashMap},
+    ecs::{
+        change_detection::Tick,
+        entity::{hash_map::EntityHashMap, hash_set::EntityHashSet},
+    },
     platform::collections::HashMap,
     prelude::*,
 };
@@ -34,6 +37,17 @@ pub(crate) struct ClientTicks {
     /// It should be included in mutate messages and server events to avoid needless waiting for the next update
     /// message to arrive.
     pub(crate) update_tick: RepliconTick,
+
+    /// Entities with a mutation that is sent but not yet acknowledged, or held back by priority.
+    ///
+    /// They need another look every tick even if nothing else changes on them,
+    /// until a look finds nothing left to send.
+    pub(crate) pending: EntityHashSet,
+
+    /// Whether the client went through a full pass over all replicated entities.
+    ///
+    /// Until then it may lack entities that didn't change since it connected.
+    pub(crate) synced: bool,
 
     /// Mutate message indices mapped to their info.
     mutations: HashMap<MutateIndex, MutateInfo>,
